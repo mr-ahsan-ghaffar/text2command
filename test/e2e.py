@@ -147,6 +147,10 @@ def run_shell(name, path, t2c_dir, port):
         argv = [path, "-i"]
     else:
         env["ZDOTDIR"] = home
+        # Ubuntu's global zshrc runs compinit, which can stop to ask a question
+        # about folder permissions and swallow the test's first keystrokes.
+        with open(os.path.join(home, ".zshenv"), "w") as f:
+            f.write("skip_global_compinit=1\n")
         argv = [path, "-i"]
     term = Term(argv, env)
     term.pump(1.0)
