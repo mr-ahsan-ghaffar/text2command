@@ -107,8 +107,8 @@ Your login is stored in `~/.config/t2c/`, readable only by your user account. It
 
 ## Limitations
 
-- **Shells:** zsh and bash 4.1+ are fully supported. macOS ships bash 3.2, which can't replace text on the prompt, so there use zsh or `t2c "your request"`.
-- **Fish:** the fish hook is included but hasn't been tested yet, and it sends the command and exit code without error text.
+- **Shells:** zsh, bash 4.1+, and fish are supported. macOS ships bash 3.2, which can't replace text on the prompt, so there use zsh or `t2c "your request"`.
+- **Fish:** a fix sends the command and exit code without error text.
 - **Commands you typed yourself:** a fix gets the command and exit code, but not the error text. Recording everything would break interactive tools, so t2c only records output for commands it generated.
 - **Progress bars:** while a generated command runs, its error output goes through t2c rather than straight to the terminal. Some tools, like `git clone`, hide their progress bars or colors when this happens.
 
