@@ -1,3 +1,8 @@
+// EDNS is off because some DNS forwarders, including VMware's NAT, return malformed
+// replies to it, and this build's own resolver then reports "no such host".
+//
+//go:debug netedns0=0
+
 // Command t2c turns plain language into shell commands.
 package main
 

@@ -277,7 +277,11 @@ func postForm(ctx context.Context, target string, form url.Values) (*http.Respon
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	return http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, reachError(ctx, "OpenAI")
+	}
+	return resp, nil
 }
 
 type idClaims struct {
@@ -362,7 +366,7 @@ func fetchKey(ctx context.Context, kid string) (*rsa.PublicKey, error) {
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, reachError(ctx, "OpenAI")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {

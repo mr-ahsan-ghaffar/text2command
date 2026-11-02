@@ -64,7 +64,7 @@ func LoginOpenRouter(ctx context.Context, out io.Writer) (string, error) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", reachError(ctx, "OpenRouter")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {

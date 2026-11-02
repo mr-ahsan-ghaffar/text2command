@@ -20,6 +20,14 @@ import (
 
 const loginTimeout = 5 * time.Minute
 
+// reachError replaces a raw network error with one a person can act on.
+func reachError(ctx context.Context, service string) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return fmt.Errorf("couldn't reach %s to finish signing in. Check your connection and try again", service)
+}
+
 func randomString() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {

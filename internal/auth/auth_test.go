@@ -225,6 +225,19 @@ func TestLoginChatGPTRejections(t *testing.T) {
 	})
 }
 
+func TestNetworkFailureMessage(t *testing.T) {
+	setup(t)
+	f := newFakeOpenAI(t)
+	f.srv.Close()
+	_, err := tokenRequest(context.Background(), url.Values{"grant_type": {"refresh_token"}})
+	if err == nil || !strings.Contains(err.Error(), "couldn't reach OpenAI") {
+		t.Errorf("got %v", err)
+	}
+	if strings.Contains(err.Error(), "dial tcp") || strings.Contains(err.Error(), "127.0.0.1") {
+		t.Errorf("raw network details reached the user: %v", err)
+	}
+}
+
 func TestVerifyIDToken(t *testing.T) {
 	setup(t)
 	f := newFakeOpenAI(t)
