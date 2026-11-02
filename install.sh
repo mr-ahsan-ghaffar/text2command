@@ -57,9 +57,37 @@ chmod 755 "$tmp/$file"
 mv "$tmp/$file" "$dir/t2c"
 echo "Installed t2c to $dir/t2c"
 
-"$dir/t2c" setup || echo "Add the shortcut later by running: t2c setup"
+if ! "$dir/t2c" setup; then
+  echo "To add the shortcut later, run: t2c setup"
+  exit 0
+fi
+
+# Without a terminal to talk to, such as in a script, stop here.
+if [ -n "${T2C_NO_SHELL:-}" ] || [ ! -t 1 ] || ! (: </dev/tty) 2>/dev/null; then
+  echo
+  echo "Next: open a new terminal and run 't2c login' to connect an AI model."
+  echo "Then type what you want and press Ctrl+G."
+  echo "To remove everything later, run: t2c uninstall"
+  exit 0
+fi
+
+if ! "$dir/t2c" status 2>/dev/null | grep -q '^Provider:'; then
+  echo
+  echo "Connect an AI model to finish setting up."
+  # Ctrl+C should cancel the login, not stop the rest of this script.
+  trap ':' INT
+  T2C_INSTALLING=1 "$dir/t2c" login </dev/tty || echo "You can sign in later with: t2c login"
+  trap - INT
+fi
 
 echo
-echo "Next: open a new terminal and run 't2c login' to connect an AI model."
-echo "Then type what you want and press Ctrl+G."
+echo "t2c is ready. Type what you want and press Ctrl+G, then Enter to run it."
 echo "To remove everything later, run: t2c uninstall"
+
+# A script can't change the terminal it was started from, but it can become a
+# new shell in it, which loads the shortcut. Skip that if it's already loaded.
+if [ "${T2C_SHORTCUT:-}" != "$PPID" ] && [ -n "${SHELL:-}" ]; then
+  rm -rf "$tmp"
+  trap - EXIT
+  exec "$SHELL" </dev/tty
+fi

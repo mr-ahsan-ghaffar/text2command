@@ -138,6 +138,10 @@ func cmdLogin(args []string) error {
 	if d, err := config.Dir(); err == nil {
 		fmt.Printf("Your login is saved in %s, readable only by your user account.\n", d)
 	}
+	// The installer loads the shortcut itself once login finishes.
+	if os.Getenv("T2C_INSTALLING") == "" && term.IsTerminal(int(os.Stdout.Fd())) && os.Getenv("T2C_SHORTCUT") != strconv.Itoa(os.Getppid()) {
+		fmt.Println("To use Ctrl+G in this terminal, first run: exec $SHELL")
+	}
 	return nil
 }
 

@@ -1,4 +1,5 @@
 # t2c shell integration for zsh
+export T2C_SHORTCUT=$$
 typeset -g _t2c_dir="${XDG_STATE_HOME:-$HOME/.local/state}/t2c/s/$$"
 command mkdir -p "$_t2c_dir" 2>/dev/null && command chmod 700 "$_t2c_dir" 2>/dev/null
 typeset -g _t2c_gen="" _t2c_orig="" _t2c_last_cmd="" _t2c_last_exit=0 _t2c_errfd=""

@@ -15,11 +15,13 @@ Nothing runs until you press Enter. t2c works inside your existing terminal on m
 curl -fsSL https://raw.githubusercontent.com/mr-ahsan-ghaffar/text2command/main/install.sh | sh
 ```
 
-Then open a new terminal and connect an AI model:
+If you don't have `curl`, as on some Ubuntu installs, use `wget`:
 
 ```bash
-t2c login
+wget -qO- https://raw.githubusercontent.com/mr-ahsan-ghaffar/text2command/main/install.sh | sh
 ```
+
+The installer asks you to connect an AI model, then starts a fresh shell in the same terminal with Ctrl+G ready to use. That new shell runs inside your old one, so typing `exit` once takes you back to it. Set `T2C_NO_SHELL=1` to skip the login and new shell, for example in scripts.
 
 To build from source instead, you need Go:
 

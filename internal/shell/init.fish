@@ -1,5 +1,6 @@
 # t2c shell integration for fish
 if status is-interactive
+    set -gx T2C_SHORTCUT $fish_pid
     set -g __t2c_dir (string join / (set -q XDG_STATE_HOME; and echo $XDG_STATE_HOME; or echo $HOME/.local/state) t2c s $fish_pid)
     command mkdir -p $__t2c_dir 2>/dev/null; and command chmod 700 $__t2c_dir 2>/dev/null
     set -g __t2c_gen ""

@@ -3,6 +3,7 @@
 
 Usage: test/e2e.py <path-to-t2c> <zsh|bash|fish>[=/path/to/shell] ...
 """
+import hashlib
 import http.server
 import json
 import os
@@ -408,6 +409,106 @@ def run_shell(name, path, t2c_dir, port):
     return results
 
 
+def fake_release(t2c):
+    """Builds a folder laid out like a GitHub release, for the installer to use."""
+    rel = tempfile.mkdtemp(prefix="t2c-rel-")
+    system = "darwin" if sys.platform == "darwin" else "linux"
+    arch = {"x86_64": "amd64", "amd64": "amd64", "arm64": "arm64", "aarch64": "arm64"}[os.uname().machine]
+    name = f"t2c-{system}-{arch}"
+    shutil.copy(t2c, os.path.join(rel, name))
+    digest = hashlib.sha256(open(t2c, "rb").read()).hexdigest()
+    with open(os.path.join(rel, "checksums.txt"), "w") as f:
+        f.write(f"{digest}  {name}\n")
+    return rel
+
+
+def install_flow(name, path, t2c, port):
+    """One install command must leave Ctrl+G working, with no other step."""
+    results = []
+    rel = fake_release(t2c)
+    installer = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "install.sh"))
+    home = tempfile.mkdtemp(prefix="t2c-inst-")
+    env = {
+        "HOME": home,
+        "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
+        "TERM": "xterm",
+        "LANG": "en_US.UTF-8",
+        "SHELL": path,
+        "T2C_BASE_URL": "file://" + rel,
+    }
+    if name == "zsh":
+        env["ZDOTDIR"] = home
+        with open(os.path.join(home, ".zshenv"), "w") as f:
+            f.write("skip_global_compinit=1\n")
+    term = Term(["sh", "-c", f'cat "{installer}" | sh'], env)
+
+    def check(label, fn):
+        try:
+            fn()
+            results.append((label, None))
+        except AssertionError as e:
+            results.append((label, str(e)))
+
+    def first_install():
+        term.expect("Number: ", timeout=20)
+        term.send(b"7\r")
+        term.expect("API address")
+        term.send(f"http://127.0.0.1:{port}/v1\r".encode())
+        term.expect("API key")
+        term.send(b"test-key\r")
+        term.expect("Signed in to custom")
+        term.expect("t2c is ready")
+        term.absent("exec $SHELL")
+        term.pump(1.0)
+        term.send(b"function fish_prompt; echo -n 'READY> '; end\r" if name == "fish" else b"PS1='READY> '\r")
+        term.expect("READY> ")
+        term.clear()
+        term.send(b"make-marker please")
+        term.pump(0.2)
+        term.send(CTRL_G)
+        term.pump(0.6)
+        term.send(b"\r")
+        term.expect("generated-marker\r\n")
+        term.expect("READY> ")
+
+    def update_in_same_terminal():
+        pid_var = b"$fish_pid" if name == "fish" else b"$$"
+        term.clear()
+        term.send(b"echo pid=" + pid_var + b"\r")
+        term.expect("pid=")
+        term.pump(0.3)
+        before = term.seen.split(b"\r")[0]
+        term.clear()
+        term.send(f'cat "{installer}" | sh\r'.encode())
+        term.expect("t2c is ready", timeout=20)
+        term.absent("Number: ")
+        term.expect("READY> ")
+        term.clear()
+        term.send(b"echo pid=" + pid_var + b"\r")
+        term.expect("pid=")
+        term.pump(0.3)
+        after = term.seen.split(b"\r")[0]
+        assert before == after and before, f"update started another shell: {before!r} then {after!r}"
+
+    check(f"one install command leaves Ctrl+G working ({name})", first_install)
+    check(f"updating doesn't ask again or add a shell ({name})", update_in_same_terminal)
+    term.close()
+
+    def no_terminal():
+        h = tempfile.mkdtemp(prefix="t2c-inst-")
+        e = {**env, "HOME": h}
+        e.pop("ZDOTDIR", None)
+        r = subprocess.run(["sh", installer], env=e, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60, start_new_session=True)
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert "run 't2c login'" in r.stdout, r.stdout
+        shutil.rmtree(h, ignore_errors=True)
+
+    check(f"install in a script doesn't wait for input ({name})", no_terminal)
+    shutil.rmtree(home, ignore_errors=True)
+    shutil.rmtree(rel, ignore_errors=True)
+    return results
+
+
 def bash_too_old(path, t2c_dir, port):
     env, home = fresh_env(t2c_dir, port)
     env["SHELL"] = path
@@ -588,7 +689,7 @@ def main():
         version = subprocess.run([path, "--version"], capture_output=True, text=True).stdout.splitlines()[0]
         print(f"\n{name}: {version}")
         old = name == "bash" and re.search(r"version (3\.|4\.0)", version)
-        results = bash_too_old(path, t2c_dir, port) if old else run_shell(name, path, t2c_dir, port)
+        results = bash_too_old(path, t2c_dir, port) if old else run_shell(name, path, t2c_dir, port) + install_flow(name, path, t2c, port)
         for label, err in results:
             print(f"  {'ok  ' if err is None else 'FAIL'} {label}")
             if err:

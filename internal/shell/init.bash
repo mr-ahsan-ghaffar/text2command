@@ -4,6 +4,7 @@ if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 1) ))
   # Bash 3.2, which macOS ships, can't replace the text on the prompt.
   printf 't2c: the shortcut needs bash 4.1 or newer, and this is bash %s. Use zsh, or run: t2c "your request"\n' "$BASH_VERSION" >&2
 else
+export T2C_SHORTCUT=$$
 __t2c_dir="${XDG_STATE_HOME:-$HOME/.local/state}/t2c/s/$$"
 command mkdir -p "$__t2c_dir" 2>/dev/null && command chmod 700 "$__t2c_dir" 2>/dev/null
 __t2c_gen="" __t2c_orig="" __t2c_last_cmd="" __t2c_last_exit=0 __t2c_histnum=""
